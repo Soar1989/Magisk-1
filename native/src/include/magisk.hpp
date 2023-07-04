@@ -12,7 +12,7 @@
 
 // tmpfs paths
 extern std::string    MAGISKTMP;
-#define INTLROOT      ".magisk"
+#define INTLROOT      ".wenping"
 #define MIRRDIR       INTLROOT "/mirror"
 #define PREINITMIRR   INTLROOT "/preinit"
 #define BLOCKDIR      INTLROOT "/block"
@@ -28,7 +28,7 @@ extern std::string    MAGISKTMP;
 #define MAIN_CONFIG   INTLROOT "/config"
 #define MAIN_SOCKET   INTLROOT "/socket"
 
-constexpr const char *applet_names[] = { "su", "resetprop", nullptr };
+constexpr const char *applet_names[] = { "wenping", "resetprop", nullptr };
 
 #define POST_FS_DATA_WAIT_TIME       40
 #define POST_FS_DATA_SCRIPT_MAX_TIME 35
