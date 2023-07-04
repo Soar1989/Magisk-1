@@ -74,9 +74,9 @@ jobs:
         run: |
           python build.py -vr all
 
-      - name: Build debug
-        run: |
-          python build.py -v all
+      #- name: Build debug
+       # run: |
+        #  python build.py -v all
 
       - name: Stop gradle daemon
         run: ./gradlew --stop
