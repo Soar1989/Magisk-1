@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import errno
 import glob
 import lzma
 import multiprocessing
@@ -260,13 +259,15 @@ def run_cargo(cmds, triple="aarch64-linux-android"):
 
 
 def run_cargo_build(args):
-    os.chdir(op.join("native", "src"))
     native_out = op.join("..", "out")
     mkdir(native_out)
 
     targets = set(args.target) & set(rust_targets)
     if "resetprop" in args.target:
         targets.add("magisk")
+
+    if len(targets) == 0:
+        return
 
     # Start building the actual build commands
     cmds = ["build"]
@@ -298,8 +299,6 @@ def run_cargo_build(args):
             source = op.join("target", rust_triple, rust_out, f"lib{tgt}.a")
             target = op.join(arch_out, f"lib{tgt}-rs.a")
             mv(source, target)
-
-    os.chdir(op.join("..", ".."))
 
 
 def run_cargo_cmd(args):
@@ -383,17 +382,21 @@ def build_binary(args):
 
     header("* Building binaries: " + " ".join(args.target))
 
+    os.chdir(op.join("native", "src"))
     run_cargo_build(args)
+    os.chdir(op.join("..", ".."))
 
     dump_flag_header()
 
     flag = ""
+    clean = False
 
     if "magisk" in args.target or "magiskinit" in args.target:
         flag += " B_PRELOAD=1"
 
     if "magiskpolicy" in args.target:
         flag += " B_POLICY=1"
+        clean = True
 
     if "test" in args.target:
         flag += " B_TEST=1"
@@ -416,6 +419,7 @@ def build_binary(args):
 
     if "magisk" in args.target:
         flag += " B_MAGISK=1"
+        clean = True
 
     if "magiskinit" in args.target:
         flag += " B_INIT=1"
@@ -423,6 +427,8 @@ def build_binary(args):
     if flag:
         dump_bin_header(args)
         run_ndk_build(flag)
+
+    if clean:
         clean_elf()
 
     # BusyBox is built with different libc

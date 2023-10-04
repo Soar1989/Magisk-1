@@ -3,7 +3,8 @@ use std::fs::File;
 use std::io;
 use std::sync::{Mutex, OnceLock};
 
-use base::{copy_str, cstr, Directory, ResultExt, Utf8CStr, WalkResult};
+use crate::get_prop;
+use base::{cstr, Directory, ResultExt, Utf8CStr, Utf8CStrBuf, Utf8CStrBufRef, WalkResult};
 
 use crate::logging::{magisk_logging, zygisk_logging};
 
@@ -13,10 +14,20 @@ pub static MAGISKD: OnceLock<MagiskD> = OnceLock::new();
 #[derive(Default)]
 pub struct MagiskD {
     pub logd: Mutex<RefCell<Option<File>>>,
+    is_emulator: bool,
 }
 
 pub fn daemon_entry() {
-    let magiskd = MagiskD::default();
+    let mut qemu = get_prop(cstr!("ro.kernel.qemu"), false);
+    if qemu.is_empty() {
+        qemu = get_prop(cstr!("ro.boot.qemu"), false);
+    }
+    let is_emulator = qemu == "1";
+
+    let magiskd = MagiskD {
+        logd: Default::default(),
+        is_emulator,
+    };
     magiskd.start_log_daemon();
     MAGISKD.set(magiskd).ok();
     magisk_logging();
@@ -29,15 +40,18 @@ pub fn zygisk_entry() {
 }
 
 pub fn get_magiskd() -> &'static MagiskD {
-    MAGISKD.get().unwrap()
+    unsafe { MAGISKD.get().unwrap_unchecked() }
 }
 
-impl MagiskD {}
+impl MagiskD {
+    pub fn is_emulator(&self) -> bool {
+        self.is_emulator
+    }
+}
 
 pub fn find_apk_path(pkg: &[u8], data: &mut [u8]) -> usize {
     use WalkResult::*;
-    fn inner(pkg: &[u8], data: &mut [u8]) -> io::Result<usize> {
-        let mut len = 0_usize;
+    fn inner(pkg: &[u8], buf: &mut dyn Utf8CStrBuf) -> io::Result<usize> {
         let pkg = match Utf8CStr::from_bytes(pkg) {
             Ok(pkg) => pkg,
             Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e)),
@@ -49,7 +63,7 @@ pub fn find_apk_path(pkg: &[u8], data: &mut [u8]) -> usize {
             let d_name = e.d_name().to_bytes();
             if d_name.starts_with(pkg.as_bytes()) && d_name[pkg.len()] == b'-' {
                 // Found the APK path, we can abort now
-                len = e.path(data)?;
+                e.path(buf)?;
                 return Ok(Abort);
             }
             if d_name.starts_with(b"~~") {
@@ -57,10 +71,12 @@ pub fn find_apk_path(pkg: &[u8], data: &mut [u8]) -> usize {
             }
             Ok(Skip)
         })?;
-        if len > 0 {
-            len += copy_str(&mut data[len..], "/base.apk");
+        if !buf.is_empty() {
+            buf.push_str("/base.apk");
         }
-        Ok(len)
+        Ok(buf.len())
     }
-    inner(pkg, data).log().unwrap_or(0)
+    inner(pkg, &mut Utf8CStrBufRef::from(data))
+        .log()
+        .unwrap_or(0)
 }

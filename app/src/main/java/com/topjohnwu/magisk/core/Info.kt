@@ -1,14 +1,10 @@
 package com.topjohnwu.magisk.core
 
-import android.os.Build
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.topjohnwu.magisk.StubApk
-import com.topjohnwu.magisk.core.di.AppContext
 import com.topjohnwu.magisk.core.ktx.getProperty
 import com.topjohnwu.magisk.core.model.UpdateInfo
 import com.topjohnwu.magisk.core.repository.NetworkService
-import com.topjohnwu.magisk.core.utils.NetworkObserver
 import com.topjohnwu.superuser.ShellUtils.fastCmd
 
 val isRunningAsStub get() = Info.stub != null
@@ -28,29 +24,22 @@ object Info {
     // Device state
     @JvmStatic val env by lazy { loadState() }
     @JvmField var isSAR = false
+    var legacySAR = false
     var isAB = false
     @JvmField val isZygiskEnabled = System.getenv("ZYGISK_ENABLED") == "1"
     @JvmStatic val isFDE get() = crypto == "block"
     @JvmField var ramdisk = false
-    @JvmField var vbmeta = false
+    var patchBootVbmeta = false
     var crypto = ""
     var noDataExec = false
     var isRooted = false
 
     @JvmField var hasGMS = true
-    val isSamsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true)
     @JvmField val isEmulator =
         getProperty("ro.kernel.qemu", "0") == "1" ||
             getProperty("ro.boot.qemu", "0") == "1"
 
-    val isConnected: LiveData<Boolean> by lazy {
-        MutableLiveData(false).also { field ->
-            NetworkObserver.observe(AppContext) {
-                remote = EMPTY_REMOTE
-                field.postValue(it)
-            }
-        }
-    }
+    val isConnected = MutableLiveData(false)
 
     val showSuperUser: Boolean get() {
         return env.isActive && (Const.USER_ID == 0

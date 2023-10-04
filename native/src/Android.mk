@@ -10,7 +10,6 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := magisk
 LOCAL_STATIC_LIBRARIES := \
     libbase \
-    libnanopb \
     libsystemproperties \
     libphmap \
     liblsplt \
@@ -28,7 +27,6 @@ LOCAL_SRC_FILES := \
     core/restorecon.cpp \
     core/module.cpp \
     core/thread.cpp \
-    core/resetprop/persist.cpp \
     core/resetprop/resetprop.cpp \
     core/core-rs.cpp \
     core/su/su.cpp \
@@ -101,7 +99,6 @@ LOCAL_STATIC_LIBRARIES := \
     liblzma \
     liblz4 \
     libbz2 \
-    libfdt \
     libz \
     libzopfli \
     libboot-rs
@@ -111,7 +108,6 @@ LOCAL_SRC_FILES := \
     boot/bootimg.cpp \
     boot/compress.cpp \
     boot/format.cpp \
-    boot/dtb.cpp \
     boot/boot-rs.cpp
 
 include $(BUILD_EXECUTABLE)
@@ -139,14 +135,13 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := resetprop
 LOCAL_STATIC_LIBRARIES := \
     libbase \
-    libnanopb \
     libsystemproperties \
     libmagisk-rs
 
 LOCAL_SRC_FILES := \
     core/applet_stub.cpp \
     core/resetprop/resetprop.cpp \
-    core/resetprop/persist.cpp
+    core/core-rs.cpp
 
 LOCAL_CFLAGS := -DAPPLET_STUB_MAIN=resetprop_main
 include $(BUILD_EXECUTABLE)
